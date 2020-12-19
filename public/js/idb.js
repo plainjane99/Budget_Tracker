@@ -1,5 +1,7 @@
 // file that handles IndexedDB functionality for the application
 
+// ----------------- creates the functionality to save data to IndexedDb when the app is running offline---------------
+
 // establish a connection to IndexedDb
 // create a variable to hold db connection
 let db;
@@ -27,7 +29,7 @@ request.onsuccess = function (event) {
     // check if app is online, if yes run uploadTransaction() function to send all local db data to api
     if (navigator.onLine) {
         // we haven't created this yet, but we will soon, so let's comment it out for now
-        // uploadTransaction();
+        uploadTransaction();
     }
 };
 
@@ -48,3 +50,56 @@ function saveRecord(record) {
     // add record to your store with add method
     transactionObjectStore.add(record);
 }
+
+// ----------------- creates the functionality to upload the saved data from IndexedDb when the app is back online---------------
+
+function uploadTransaction() {
+    // open a transaction on your db
+    const transaction = db.transaction(['new_transaction'], 'readwrite');
+
+    // access your object store
+    const transactionObjectStore = transaction.objectStore('new_transaction');
+
+    // get all records from store and set to a variable
+    const getAll = transactionObjectStore.getAll();
+
+    // upon a successful .getAll() execution, run this function
+    // Because the object stores can be used for both small and large file storage, 
+    // the .getAll() method above is an asynchronous function that 
+    // we have to attach an event handler to in order to retrieve the data
+    // the getAll variable we created above will have a .result property 
+    // that's an array of all the data we retrieved from the new_transaction object store
+    getAll.onsuccess = function () {
+        // if there was data in indexedDb's store, let's send it to the api server
+        if (getAll.result.length > 0) {
+            fetch('/api/transaction', {
+                method: 'POST',
+                body: JSON.stringify(getAll.result),
+                headers: {
+                    Accept: 'application/json, text/plain, */*',
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(serverResponse => {
+                    if (serverResponse.message) {
+                        throw new Error(serverResponse);
+                    }
+                    // open one more transaction
+                    const transaction = db.transaction(['new_transaction'], 'readwrite');
+                    // access the new_transaction object store
+                    const transactionObjectStore = transaction.objectStore('new_transaction');
+                    // clear all items in your store
+                    transactionObjectStore.clear();
+
+                    alert('All saved transactions has been submitted!');
+                })
+                .catch(err => {
+                    console.log(err);
+                });
+        }
+    };
+}
+
+// listen for app coming back online
+window.addEventListener('online', uploadTransaction);
