@@ -44,7 +44,7 @@ The application will start and indicate the server is running.  Once the server 
 
 1. b. The live version of the application is located at:  https://shrouded-hollows-80758.herokuapp.com/
 
-2. Whether on the local server or the live application, you should see the following:
+2. The application should look like the following:
 
 ![Budget_Tracker](./assets/images/Budget_Tracker_Screenshot.png)
 
